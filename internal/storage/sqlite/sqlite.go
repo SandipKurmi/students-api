@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/SandipKurmi/students-api/internal/config"
+	"github.com/SandipKurmi/students-api/internal/types"
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
 )
 
@@ -59,4 +60,23 @@ func (s *sqlite) CreateStudent(name string, email string, age int) (int64, error
 
 	return id, nil
 
+}
+
+// GetStudentById
+
+func (s *sqlite) GetStudentById(id int64) (types.Student, error) {
+	// Get student by ID
+	row := s.Db.QueryRow("SELECT id, name, email, age FROM students WHERE id = ?", id)
+
+	// Create a new student
+	var student types.Student
+
+	// Scan the row into the student
+	err := row.Scan(&student.ID, &student.Name, &student.Email, &student.Age)
+
+	if err != nil {
+		return types.Student{}, err
+	}
+
+	return student, nil
 }

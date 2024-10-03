@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/SandipKurmi/students-api/internal/storage"
 	"github.com/SandipKurmi/students-api/internal/types"
@@ -52,5 +53,34 @@ func New(storage storage.Storage) http.HandlerFunc {
 		}
 
 		response.WriteJson(w, http.StatusCreated, map[string]string{"id": fmt.Sprintf("%d", id), "status":"OK"})
+	}
+}
+
+func GetById(storage storage.Storage) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Get the student ID from the request URL
+		id := r.PathValue("id")
+
+		if id == "" {
+			response.WriteJson(w, http.StatusBadRequest, response.GeneralError(fmt.Errorf("id is required")))
+			return
+		}
+
+		// Convert the ID to an integer
+		idInt, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			response.WriteJson(w, http.StatusBadRequest, response.GeneralError(fmt.Errorf("invalid id")))
+			return
+		}
+
+		// Get the student from the storage
+		student, err := storage.GetStudentById(idInt)
+		if err != nil {
+			response.WriteJson(w, http.StatusInternalServerError, response.GeneralError(err))
+			return
+		}
+		// Write the student as JSON
+		response.WriteJson(w, http.StatusOK, student)
 	}
 }
