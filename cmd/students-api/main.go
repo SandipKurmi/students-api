@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -13,59 +12,55 @@ import (
 
 	"github.com/SandipKurmi/students-api/internal/config"
 	"github.com/SandipKurmi/students-api/internal/http/handlers/student"
+	"github.com/SandipKurmi/students-api/internal/storage/sqlite"
 )
 
 func main() {
-	// fmt.Println("Welcome to go project")
-
+	// Load config
 	cfg := config.MustLoad()
 
-	fmt.Printf("%+v\n", cfg)
+	// Database setup
+	storage, err := sqlite.New(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// load config
-	// data base setup
-	// setup router
+	slog.Info("Database connected", slog.String("path", cfg.StoragePath))
 
+
+	
+	// Create a new HTTP router
 	router := http.NewServeMux()
+	router.HandleFunc("POST /api/v1/students", student.New(storage))
 
-	router.HandleFunc("POST /api/v1/students", student.New())
-
-	// start server
-
+	// Start server
 	server := http.Server{
-		Addr: cfg.HttpServer.Address,
+		Addr:    cfg.HttpServer.Address,
 		Handler: router,
 	}
 
 	slog.Info("Server started", slog.String("address", cfg.HttpServer.Address))
 
-
+	// Signal handling
 	done := make(chan os.Signal, 1)
-
 	signal.Notify(done, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
-
+	// Start the server in a separate goroutine
 	go func() {
-		if err := server.ListenAndServe(); 
-		
-		err != nil {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
 	}()
 
 	<-done
-
-
 	slog.Info("Server stopped", slog.String("address", cfg.HttpServer.Address))
 
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
-
+	// Graceful shutdown with a timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err := server.Shutdown(ctx)
-
-	if err != nil {
+	// Use the existing 'err' variable instead of redeclaring it
+	if err = server.Shutdown(ctx); err != nil {
 		slog.Error("Server forced to shutdown", slog.String("error", err.Error()))
 	}
 
