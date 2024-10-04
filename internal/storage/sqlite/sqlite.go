@@ -80,3 +80,44 @@ func (s *sqlite) GetStudentById(id int64) (types.Student, error) {
 
 	return student, nil
 }
+
+func (s *sqlite) GetStudents() ([]types.Student, error) {
+	// Get all students
+	rows, err := s.Db.Query("SELECT id, name, email, age FROM students")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Create a slice of students
+	var students []types.Student
+
+	// Loop through the rows and add each student to the slice
+	for rows.Next() {
+		var student types.Student
+		if err := rows.Scan(&student.ID, &student.Name, &student.Email, &student.Age); err != nil {
+			return nil, err
+		}
+		students = append(students, student)
+	}
+
+	return students, nil
+}
+
+func  (s *sqlite) UpdateStudent(id int64, name string, email string, age int) (bool, error) {
+	// Update student by ID
+	_, err := s.Db.Exec("UPDATE students SET name = ?, email = ?, age = ? WHERE id = ?", name, email, age, id)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (s *sqlite) DeleteStudent(id int64) (bool, error) {
+	// Delete student by ID
+	_, err := s.Db.Exec("DELETE FROM students WHERE id = ?", id)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}

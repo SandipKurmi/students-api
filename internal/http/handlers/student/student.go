@@ -84,3 +84,73 @@ func GetById(storage storage.Storage) http.HandlerFunc {
 		response.WriteJson(w, http.StatusOK, student)
 	}
 }
+
+func GetAll(storage storage.Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Get all students from the storage
+		students, err := storage.GetStudents()
+		if err != nil {
+			response.WriteJson(w, http.StatusInternalServerError, response.GeneralError(err))
+			return
+		}
+		// Write the students as JSON
+		response.WriteJson(w, http.StatusOK, students)
+	}
+}
+
+func Update(storage storage.Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Get the student ID from the request URL
+		id := r.PathValue("id")
+		if id == "" {
+			response.WriteJson(w, http.StatusBadRequest, response.GeneralError(fmt.Errorf("id is required")))
+			return
+		}
+		// Convert the ID to an integer
+		idInt, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			response.WriteJson(w, http.StatusBadRequest, response.GeneralError(fmt.Errorf("invalid id")))
+			return
+		}
+		// Get the student from the request body
+		var student types.Student
+		err = json.NewDecoder(r.Body).Decode(&student)
+		if err != nil {
+			response.WriteJson(w, http.StatusBadRequest, response.GeneralError(err))
+			return
+		}
+		// Update the student in the storage
+		_, err = storage.UpdateStudent(idInt, student.Name, student.Email, student.Age)
+		if err != nil {
+			response.WriteJson(w, http.StatusInternalServerError, response.GeneralError(err))
+			return
+		}
+		// Write a success response
+		response.WriteJson(w, http.StatusOK, map[string]string{"status": "OK"})
+	}
+}
+
+func Delete(storage storage.Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Get the student ID from the request URL
+		id := r.PathValue("id")
+		if id == "" {
+			response.WriteJson(w, http.StatusBadRequest, response.GeneralError(fmt.Errorf("id is required")))
+			return
+		}
+		// Convert the ID to an integer
+		idInt, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			response.WriteJson(w, http.StatusBadRequest, response.GeneralError(fmt.Errorf("invalid id")))
+			return
+		}
+		// Delete the student from the storage
+		_, err = storage.DeleteStudent(idInt)
+		if err != nil {
+			response.WriteJson(w, http.StatusInternalServerError, response.GeneralError(err))
+			return
+		}
+		// Write a success response
+		response.WriteJson(w, http.StatusOK, map[string]string{"status": "OK"})
+	}
+}
